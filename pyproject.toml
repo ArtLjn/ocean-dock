@@ -1,0 +1,23 @@
+[project]
+name = "ocean-dock"
+version = "0.1.0"
+description = "Ocean CLI 配套工具 — Session 管理 · MCP Server · Hooks · Skills"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.24.0",
+    "rich>=14.0.0",
+    "jsonlines>=4.0.0",
+    "mcp>=1.9.0",
+]
+
+[project.scripts]
+ocean-dock = "ocean_dock.cli:app"
+dock = "ocean_dock.cli:app"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ocean_dock*"]
