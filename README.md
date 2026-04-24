@@ -32,39 +32,42 @@
 ## 快速开始
 
 ```bash
-# 安装
+# 克隆并安装
+git clone git@github.com:ArtLjn/ocean-duck.git
+cd ocean-duck
 pip install -e .
 
-# 一键配置（注册 MCP + 复制 Skill + 写入 Hooks + Git 初始化）
-ocean-dock init
+# 一键全局配置（安装 dock 命令 + 注册 MCP Server + 清理旧配置）
+dock setup
 
 # 查看所有项目
-ocean-dock list
+dock list
 
 # 查看会话详情
-ocean-dock show <session-id>
+dock show <session-id>
 
 # 恢复会话
-ocean-dock resume <session-id>
-ocean-dock resume <session-id> --fork    # fork 模式
+dock resume <session-id>
+dock resume <session-id> --fork    # fork 模式
 
 # 导出会话记录
-ocean-dock export -f md -o sessions.md
+dock export -f md -o sessions.md
 ```
 
 ## 命令一览
 
 | 命令 | 说明 |
 |------|------|
-| `ocean-dock list [PROJECT]` | 列出项目 / 展开项目下的 session |
-| `ocean-dock show <ID>` | 查看会话详情（对话时间线 + 涉及文件） |
-| `ocean-dock resume <ID>` | 恢复会话（支持 `--fork` 和 `--summary-only`） |
-| `ocean-dock summary <ID>` | 生成交接上下文摘要 |
-| `ocean-dock export` | 导出为 Markdown / JSON |
-| `ocean-dock init` | 一键配置 MCP + Skill + Hooks + Git |
-| `ocean-dock serve` | 启动 MCP Server（stdio / SSE 模式） |
-| `ocean-dock config` | 查看或修改配置 |
-| `ocean-dock switch` | 多 API Profile 管理 |
+| `dock setup` | 全局一键配置（安装命令 + 注册 MCP + 清理旧配置） |
+| `dock init` | 项目级配置（MCP + Skill + Hooks + Git） |
+| `dock list [PROJECT]` | 列出项目 / 展开项目下的 session |
+| `dock show <ID>` | 查看会话详情（对话时间线 + 涉及文件） |
+| `dock resume <ID>` | 恢复会话（支持 `--fork` 和 `--summary-only`） |
+| `dock summary <ID>` | 生成交接上下文摘要 |
+| `dock export` | 导出为 Markdown / JSON |
+| `dock serve` | 启动 MCP Server（stdio / SSE 模式） |
+| `dock config` | 查看或修改配置 |
+| `dock switch` | 多 API Profile 管理 |
 
 > 短命令别名：`dock` = `ocean-dock`
 
@@ -130,20 +133,47 @@ pip install -e .
 
 **依赖：** Python >= 3.10
 
-## 配置 MCP Server
+## 配置
 
-Ocean Dock 通过 MCP 协议为 Claude Code / Ocean CLI 提供 session 管理能力。
+### 全局一键配置（推荐）
 
-### 方式一：一键配置（推荐）
+安装后运行一条命令完成所有配置：
 
 ```bash
-ocean-dock init          # 全局注册（所有项目可用）
-ocean-dock init -s local # 仅当前项目
+dock setup
 ```
 
-该命令会自动完成：注册 MCP Server + 复制 Skill + 写入 Hooks + Git 初始化。
+该命令自动完成三件事：
 
-### 方式二：手动注册
+1. **安装 `dock` 命令** — 写入 `~/.local/bin/dock`，全局可用
+2. **注册 MCP Server** — 写入 `~/.claude.json`，Claude Code 启动时自动连接
+3. **清理旧配置** — 移除旧的 `clm`/`claude-mgr` 命令和 MCP 条目
+
+可选参数：
+
+```bash
+dock setup --no-mcp      # 仅安装命令，不注册 MCP
+dock setup --no-bin      # 仅注册 MCP，不安装命令
+dock setup --no-cleanup  # 跳过清理旧配置
+```
+
+### 一键卸载
+
+```bash
+dock teardown           # 仅移除 MCP Server 注册
+dock teardown --all     # 移除 MCP + 卸载 dock 命令
+```
+
+### 项目级配置
+
+在具体项目中初始化 MCP + Skills + Hooks：
+
+```bash
+dock init          # 当前项目
+dock init -s local # 仅当前项目
+```
+
+### 手动注册 MCP
 
 在 `~/.claude.json`（全局）或项目 `.claude/settings.json` 中添加：
 
@@ -159,23 +189,15 @@ ocean-dock init -s local # 仅当前项目
 }
 ```
 
-如果 `ocean-dock` 不在 PATH 中，使用绝对路径：
+如果不在 PATH 中，使用绝对路径：
 
 ```json
-{
-  "mcpServers": {
-    "ocean-dock": {
-      "type": "stdio",
-      "command": "/path/to/ocean-duck/venv/bin/ocean-dock",
-      "args": ["serve"]
-    }
-  }
-}
+"command": "/path/to/ocean-duck/venv/bin/ocean-dock"
 ```
 
 ### 验证连接
 
-重启 Claude Code 后，输入 `/mcp` 查看 `ocean-dock` 是否连接成功。连接后 AI 可直接调用 12 个 MCP Tools，例如：
+重启 Claude Code 后，输入 `/mcp` 查看 `ocean-dock` 是否连接成功。连接后 AI 可直接调用 12 个 MCP Tools：
 
 ```
 > 帮我查看最近的 session
