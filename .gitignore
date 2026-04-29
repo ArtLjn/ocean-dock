@@ -36,3 +36,6 @@ coverage.xml
 .env
 .env.*
 credentials.json
+
+# Claude Code 项目配置
+.claude/

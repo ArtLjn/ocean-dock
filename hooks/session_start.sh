@@ -85,7 +85,7 @@ for i, e in enumerate(entries, 1):
 ESCAPED=$(echo "$SESSION_LIST" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))")
 
 # 构建 systemMessage
-MSG="该项目有以下历史 session，请展示给用户并询问是否需要恢复某个 session 的上下文（支持多选）：\\n\\n$ESCAPED\\n\\n用户选择后，请使用 claude-manager MCP 工具的 get_session_summary 获取对应 session 的摘要并展示。"
+MSG="该项目有以下历史 session，请展示给用户并询问是否需要恢复某个 session 的上下文（支持多选）：\\n\\n$ESCAPED\\n\\n用户选择后，请使用 ocean-dock MCP 工具的 get_session_summary 获取对应 session 的摘要并展示。"
 
 # 检测架构记忆是否需要更新
 ARCH_FLAG="$CWD/.claude/memory/.arch-stale"

@@ -1,8 +1,9 @@
 [project]
 name = "ocean-dock"
 version = "0.1.0"
-description = "Ocean CLI 配套工具 — Session 管理 · MCP Server · Hooks · Skills"
+description = "Session Manager & MCP Server for Claude Code — manage sessions, automate hooks, and extend AI with 12 MCP tools"
 requires-python = ">=3.10"
+keywords = ["claude-code", "mcp-server", "session-manager", "developer-tools", "cli", "hooks", "skills", "python", "anthropic", "ai-assistant", "productivity", "automation", "ocean-cli"]
 dependencies = [
     "typer>=0.24.0",
     "rich>=14.0.0",
