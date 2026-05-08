@@ -144,7 +144,7 @@ def load_session_messages(session: Session) -> list[SessionMessage]:
                         raw=obj,
                     )
                 )
-    except (jsonlines.JSONLinesError, OSError):
+    except (jsonlines.Error, OSError):
         pass
 
     return messages
