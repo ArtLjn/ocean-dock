@@ -137,11 +137,22 @@ def _merge_hooks_into_settings(settings_path: Path) -> None:
 def init(
     project_dir: str = typer.Argument("", help="目标项目路径（默认当前目录）"),
     scope: str = typer.Option("user", "-s", "--scope", help="MCP 注册范围: user（全局）或 local（项目级）"),
+    harness: bool = typer.Option(True, "--harness/--no-harness", help="是否同时初始化 Harness Engineering"),
+    tech_stack: str = typer.Option("both", "-t", "--tech-stack", help="技术栈: python / ts / both"),
+    backend_dir: str = typer.Option("backend", "--backend-dir", help="后端目录名"),
+    frontend_dir: str = typer.Option("frontend", "--frontend-dir", help="前端目录名"),
 ):
-    """一键配置 MCP + Skill + Hooks
+    """一键配置 MCP + Skill + Hooks + Harness
 
-    通过 claude mcp add 注册 MCP Server，复制 Skill 到 .claude/skills/，
-    写入 Hooks 到 .claude/settings.json。
+    注册 MCP Server、复制 Skill、写入 Hooks、配置 Git，并可同时搭建
+    Harness Engineering 基础设施（CLAUDE.md、docs/、scripts/、agents、CI）。
+
+    \b
+    示例:
+      dock init                          完整配置（含 Harness）
+      dock init --no-harness             仅配置 ocean-dock，不搭建 Harness
+      dock init -t python                纯 Python 项目
+      dock init /path/to/project         指定目录
     """
     target = Path(project_dir).resolve() if project_dir else Path.cwd()
     claude_dir = target / ".claude"
@@ -273,4 +284,23 @@ def init(
     console.print(f"  MCP scope: {scope}")
     console.print("  Git hooks: pre-commit / commit-msg / post-checkout / pre-push")
     console.print("  防污染: guard_write + cleanup_stop")
+
+    # ---- 6. Harness Engineering ----
+    if harness:
+        console.print("\n[bold]配置 Harness Engineering...[/bold]")
+        if tech_stack not in ("python", "ts", "both"):
+            console.print(f"  [yellow]无效技术栈: {tech_stack}，跳过 Harness[/yellow]")
+        else:
+            from ocean_dock.harness import init_harness as _init_harness
+
+            result = _init_harness(
+                project_dir=target,
+                project_name=target.name,
+                tech_stack=tech_stack,
+                backend_dir=backend_dir,
+                frontend_dir=frontend_dir,
+                on_log=lambda msg: console.print(msg),
+            )
+            console.print(f"  [green]已生成 {result['total_created']} 个 Harness 文件[/green]")
+
     console.print("\n[dim]重启 Claude Code 后生效，输入 /mcp 确认连接状态[/dim]")
