@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 
 from ocean_dock.utils import CLAUDE_HOME, load_config, save_config
-from ocean_dock.commands import export, init, list as list_cmd, resume, setup, show, summary, switch
+from ocean_dock.commands import export, harness_init, init, list as list_cmd, resume, setup, show, summary, switch
 
 app = typer.Typer(
     name="ocean-dock",
@@ -36,6 +36,7 @@ app.command("resume")(resume.resume)
 app.command("export")(export.export)
 app.command("summary")(summary.summary)
 app.command("init")(init.init)
+app.command("init-harness")(harness_init.harness_init)
 app.command("setup")(setup.setup)
 app.command("teardown")(setup.teardown)
 app.add_typer(switch.switch_app)

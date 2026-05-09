@@ -392,3 +392,266 @@ def register_tools(server):
             capture_output=True, text=True, cwd=work_dir,
         )
         return f"提交成功：\n{log.stdout.strip()}\n\n变更文件：\n" + "\n".join(f"- {f}" for f in changed_files)
+
+    @server.tool()
+    def init_harness(
+        project_dir: str = "",
+        project_name: str = "",
+        tech_stack: str = "both",
+        backend_dir: str = "backend",
+        frontend_dir: str = "frontend",
+    ) -> str:
+        """一键初始化 Harness Engineering 基础设施。
+
+        为项目生成完整的 Harness 工作流：CLAUDE.md（地图模式）、docs/ 知识库、
+        架构约束脚本、hooks（三要素格式）、4 个 agent、CI 管线（7道门）。
+
+        当用户说"初始化 harness"、"搭建工程约束"、"搭建 harness 工作流"时触发。
+
+        Args:
+            project_dir: 目标项目路径（默认当前工作目录）
+            project_name: 项目名称（默认用目录名）
+            tech_stack: 技术栈 — python / ts / both（默认 both）
+            backend_dir: 后端目录名（默认 backend）
+            frontend_dir: 前端目录名（默认 frontend）
+        """
+        import os
+
+        from ocean_dock.harness import init_harness as _init
+
+        target = project_dir or os.getcwd()
+        name = project_name or os.path.basename(target)
+
+        if tech_stack not in ("python", "ts", "both"):
+            return f"❌ 无效技术栈: {tech_stack}，可选: python / ts / both"
+
+        result = _init(
+            project_dir=target,
+            project_name=name,
+            tech_stack=tech_stack,
+            backend_dir=backend_dir,
+            frontend_dir=frontend_dir,
+        )
+
+        lines = ["## Harness Engineering 初始化完成", ""]
+        lines.append(f"- **项目**: {name}")
+        lines.append(f"- **技术栈**: {tech_stack}")
+        lines.append(f"- **新增文件**: {result['total_created']} 个")
+        lines.append(f"- **跳过文件**: {result['total_skipped']} 个")
+
+        if result["created"]:
+            lines.append("")
+            lines.append("### 新增文件")
+            for fp in result["created"]:
+                short = fp.split("/")[-1]
+                lines.append(f"- `{short}`")
+
+        if result["skipped"]:
+            lines.append("")
+            lines.append("### 跳过文件（已存在）")
+            for fp in result["skipped"]:
+                short = fp.split("/")[-1]
+                lines.append(f"- `{short}`")
+
+        lines.append("")
+        lines.append("### 下一步")
+        lines.append("1. 审阅 `.claude/CLAUDE.md` 中的硬性规则")
+        lines.append("2. 审阅 `docs/architecture/boundaries.md` 中的依赖方向")
+        lines.append("3. 运行 `bash scripts/harness-check.sh` 验证")
+        lines.append("4. 提交代码，CI 管线自动生效")
+
+        return "\n".join(lines)
+
+    @server.tool()
+    def sync_docs(
+        project_dir: str = "",
+        scope: str = "uncommitted",
+    ) -> str:
+        """扫描代码变更，生成文档同步待办清单。
+
+        对比 git 变更文件和 docs/ 下的文档状态，找出需要更新但尚未同步的文档。
+        当用户说"同步文档"、"检查文档同步"、"文档需要更新吗"、"sync docs"时触发。
+        也适用于修改代码后确认文档是否需要同步的场景。
+
+        Args:
+            project_dir: 项目路径（默认当前工作目录）
+            scope: 扫描范围 — "uncommitted"（默认，未提交变更）/ "last_commit"（最近一次提交）/ "last_5"（最近5次提交）
+        """
+        import os
+        import re
+
+        cwd = project_dir or os.getcwd()
+
+        # ── 1. 获取代码变更文件列表 ──
+        if scope == "last_commit":
+            diff_cmd = ["git", "diff", "HEAD~1", "--name-only"]
+        elif scope == "last_5":
+            diff_cmd = ["git", "diff", "HEAD~5", "--name-only"]
+        else:
+            # uncommitted: staged + unstaged + untracked
+            diff_cmd = ["git", "diff", "HEAD", "--name-only"]
+
+        result = subprocess.run(diff_cmd, capture_output=True, text=True, cwd=cwd)
+        changed_files = [f for f in result.stdout.strip().split("\n") if f] if result.stdout.strip() else []
+
+        # 也检查未追踪文件
+        if scope == "uncommitted":
+            untracked = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                capture_output=True, text=True, cwd=cwd,
+            )
+            if untracked.stdout.strip():
+                changed_files.extend(f for f in untracked.stdout.strip().split("\n") if f)
+
+        changed_files = list(set(changed_files))
+        if not changed_files:
+            return "✅ 没有未提交的代码变更，所有文档应该是最新的。"
+
+        # ── 2. 代码→文档映射规则 ──
+        DOC_MAP = {
+            # 代码路径模式: (需要同步的文档路径, 文档说明)
+            r"app/api/|api/v\d+/|routes/": [
+                ("docs/reference/api-spec.yaml", "API 规范"),
+                ("docs/design/", "设计文档状态标记"),
+            ],
+            r"app/models/|models/|entities/": [
+                ("docs/reference/api-spec.yaml", "API 响应字段"),
+                ("docs/design/", "数据模型描述"),
+            ],
+            r"app/services/|services/|core/": [
+                ("docs/design/", "验收标准/业务逻辑描述"),
+            ],
+            r"app/repositories/|repositories/|db/": [
+                ("docs/architecture/overview.md", "架构概述中的数据层说明"),
+            ],
+            r"Dockerfile|docker-compose|\.dockerignore": [
+                ("docs/architecture/overview.md", "部署说明"),
+            ],
+            r"app/core/config|\.env\.example|settings\.py": [
+                ("docs/architecture/overview.md", "配置说明"),
+                (".claude/rules/security.md", "安全规范"),
+            ],
+            r"middleware|auth|security": [
+                (".claude/rules/security.md", "安全规范"),
+            ],
+            r"app/|src/": [
+                ("docs/architecture/boundaries.md", "依赖方向（如有新增模块）"),
+            ],
+        }
+
+        # ── 3. 匹配变更文件→需要同步的文档 ──
+        todo: dict[str, set[str]] = {}  # doc_path -> set of reasons
+
+        for f in changed_files:
+            for pattern, docs in DOC_MAP.items():
+                if re.search(pattern, f):
+                    for doc_path, reason in docs:
+                        todo.setdefault(doc_path, set()).add(f"{reason}（因 {f} 变更）")
+
+        if not todo:
+            lines = ["## 文档同步检查", ""]
+            lines.append(f"扫描了 {len(changed_files)} 个变更文件，没有需要同步的文档。")
+            lines.append("")
+            lines.append("**变更文件:**")
+            for f in changed_files:
+                lines.append(f"- `{f}`")
+            return "\n".join(lines)
+
+        # ── 4. 检查文档实际状态 ──
+        lines = ["## 文档同步待办", ""]
+        lines.append(f"扫描了 **{len(changed_files)}** 个变更文件，发现 **{len(todo)}** 个文档需要同步：")
+        lines.append("")
+
+        must_update = []  # 文档已存在但未更新
+        missing = []      # 文档不存在
+
+        for doc_path, reasons in sorted(todo.items()):
+            full_path = os.path.join(cwd, doc_path)
+            # 对 docs/design/ 这类目录，检查里面有没有相关文档
+            if doc_path.endswith("/"):
+                # 目录级匹配，检查目录是否存在及内容
+                if os.path.isdir(full_path):
+                    # 检查目录下有没有 front-matter 中 last_updated 在近 7 天内的文档
+                    recent = False
+                    for root, _, files in os.walk(full_path):
+                        for fn in files:
+                            if fn.endswith(".md") and fn != "TEMPLATE.md":
+                                fp = os.path.join(root, fn)
+                                try:
+                                    content = open(fp, encoding="utf-8").read(500)
+                                    if "status: active" in content or "status: in_progress" in content:
+                                        recent = True
+                                        break
+                                except OSError:
+                                    pass
+                        if recent:
+                            break
+                    if not recent:
+                        must_update.append((doc_path, reasons))
+                    else:
+                        # 有活跃文档，可能已更新，但仍需确认
+                        lines.append(f"### ⚠️ `{doc_path}`（请确认已同步）")
+                        for r in sorted(reasons):
+                            lines.append(f"- {r}")
+                        lines.append("")
+                        continue
+                else:
+                    missing.append((doc_path, reasons))
+            elif os.path.exists(full_path):
+                must_update.append((doc_path, reasons))
+            else:
+                missing.append((doc_path, reasons))
+
+        if must_update:
+            lines.append("### 🔴 必须更新")
+            lines.append("")
+            for doc_path, reasons in must_update:
+                lines.append(f"**`{doc_path}`**")
+                for r in sorted(reasons):
+                    lines.append(f"- {r}")
+                lines.append("")
+
+        if missing:
+            lines.append("### 🟡 需要创建")
+            lines.append("")
+            for doc_path, reasons in missing:
+                lines.append(f"**`{doc_path}`**")
+                for r in sorted(reasons):
+                    lines.append(f"- {r}")
+                lines.append("")
+
+        # ── 5. 同时检查 docs/ 下的 front-matter 新鲜度 ──
+        docs_dir = os.path.join(cwd, "docs")
+        if os.path.isdir(docs_dir):
+            stale_docs = []
+            for root, _, files in os.walk(docs_dir):
+                for fn in files:
+                    if not fn.endswith(".md"):
+                        continue
+                    fp = os.path.join(root, fn)
+                    try:
+                        content = open(fp, encoding="utf-8").read(500)
+                        if "status: draft" in content:
+                            # draft 超过 7 天提醒
+                            import time
+                            mtime = os.path.getmtime(fp)
+                            days_old = (time.time() - mtime) / 86400
+                            if days_old > 7:
+                                rel = os.path.relpath(fp, cwd)
+                                stale_docs.append((rel, int(days_old), "draft 超过 7 天"))
+                        elif "status: deprecated" in content:
+                            pass  # 已废弃，跳过
+                    except OSError:
+                        pass
+
+            if stale_docs:
+                lines.append("### ⚠️ 过期文档")
+                lines.append("")
+                for rel, days, reason in stale_docs:
+                    lines.append(f"- `{rel}` — {reason}（{days} 天）")
+                lines.append("")
+
+        lines.append("---")
+        lines.append("*请逐项更新上述文档，更新后将 front-matter 中的 `last_updated` 改为今天。*")
+
+        return "\n".join(lines)
