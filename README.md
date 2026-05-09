@@ -1,3 +1,5 @@
+[简体中文](./README_zh.md) | **English**
+
 <p align="center">
   <img src="./static/banner.png" alt="Ocean Dock Banner" width="800">
 </p>
