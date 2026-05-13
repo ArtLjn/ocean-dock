@@ -51,7 +51,7 @@ pip install -e .
 # 一键全局配置（安装 dock 命令 + 注册 MCP Server + 清理旧版）
 dock setup
 
-# 初始化当前项目（MCP + Skills + Hooks + Git + Harness Engineering）
+# 初始化当前项目（MCP + Skills + Hooks + Git）
 dock init
 
 # 列出所有项目
@@ -74,7 +74,7 @@ dock export -f md -o sessions.md
 |------|------|
 | `dock setup` | 全局一键配置（命令 + MCP + 清理旧版） |
 | `dock teardown` | 移除 MCP Server 注册（`--all` 同时卸载 dock 命令） |
-| `dock init` | 项目级配置（MCP + Skills + Hooks + Git + **Harness Engineering**） |
+| `dock init` | 项目级配置（MCP + Skills + Hooks + Git） |
 | `dock list [PROJECT]` | 列出项目 / 展开项目下的会话 |
 | `dock show <ID>` | 查看会话详情（对话时间线 + 文件变更） |
 | `dock resume <ID>` | 恢复会话（支持 `--fork` 和 `--summary-only`） |
@@ -89,13 +89,9 @@ dock export -f md -o sessions.md
 ### `dock init` 选项
 
 ```bash
-dock init                           # 完整配置（含 Harness，默认）
-dock init --no-harness              # 仅配置 ocean-dock，不搭建 Harness
-dock init -t python                 # 纯 Python 项目（不生成前端规范）
-dock init -t ts                     # 纯 TypeScript 项目（不生成 Python 规范）
-dock init -t both                   # 全栈项目（默认）
-dock init --backend-dir app         # 自定义后端目录名
-dock init --frontend-dir web        # 自定义前端目录名
+dock init                           # 完整配置（MCP + Skills + Hooks + Git）
+dock init -s local                  # 仅本地项目作用域
+dock init /path/to/project          # 指定目标目录
 ```
 
 ## 架构设计
@@ -211,10 +207,8 @@ dock teardown --all     # 移除 MCP + 卸载 dock 命令
 ### 项目级配置
 
 ```bash
-dock init               # 完整配置（MCP + Skills + Hooks + Git + Harness）
-dock init --no-harness  # 仅配置 ocean-dock，不搭建 Harness
+dock init               # 完整配置（MCP + Skills + Hooks + Git）
 dock init -s local      # 仅本地项目作用域
-dock init -t python     # Python 项目
 ```
 
 ### 手动注册 MCP

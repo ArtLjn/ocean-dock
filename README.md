@@ -44,14 +44,14 @@
 
 ```bash
 # Clone and install
-git clone git@github.com:ArtLjn/ocean-duck.git
-cd ocean-duck
+git clone git@github.com:ArtLjn/ocean-dock.git
+cd ocean-dock
 pip install -e .
 
 # One-click global setup (install dock command + register MCP Server + cleanup legacy)
 dock setup
 
-# Initialize current project (MCP + Skills + Hooks + Git + Harness Engineering)
+# Initialize current project (MCP + Skills + Hooks + Git)
 dock init
 
 # List all projects
@@ -74,7 +74,7 @@ dock export -f md -o sessions.md
 |---------|-------------|
 | `dock setup` | Global one-click setup (command + MCP + cleanup) |
 | `dock teardown` | Remove MCP Server registration (+ `--all` to uninstall dock) |
-| `dock init` | Project-level setup (MCP + Skills + Hooks + Git + **Harness Engineering**) |
+| `dock init` | Project-level setup (MCP + Skills + Hooks + Git) |
 | `dock list [PROJECT]` | List projects / expand sessions under a project |
 | `dock show <ID>` | View session details (conversation timeline + file changes) |
 | `dock resume <ID>` | Resume session (supports `--fork` and `--summary-only`) |
@@ -89,13 +89,9 @@ dock export -f md -o sessions.md
 ### `dock init` Options
 
 ```bash
-dock init                           # Full setup with Harness (default)
-dock init --no-harness              # Skip Harness Engineering, only ocean-dock setup
-dock init -t python                 # Python-only project (no frontend rules)
-dock init -t ts                     # TypeScript-only project (no Python rules)
-dock init -t both                   # Full-stack project (default)
-dock init --backend-dir app         # Custom backend directory name
-dock init --frontend-dir web        # Custom frontend directory name
+dock init                           # Full setup (MCP + Skills + Hooks + Git)
+dock init -s local                  # Local project scope only
+dock init /path/to/project         # Specify target directory
 ```
 
 ## Architecture
@@ -211,10 +207,8 @@ dock teardown --all     # Remove MCP + uninstall dock command
 ### Project-level Setup
 
 ```bash
-dock init               # Full setup (MCP + Skills + Hooks + Git + Harness)
-dock init --no-harness  # ocean-dock only, no Harness Engineering
+dock init               # Full setup (MCP + Skills + Hooks + Git)
 dock init -s local      # Local project scope
-dock init -t python     # Python project
 ```
 
 ### Manual MCP Registration
@@ -236,7 +230,7 @@ Add to `~/.claude.json` (global) or project `.claude/settings.json`:
 If not in PATH, use absolute path:
 
 ```json
-"command": "/path/to/ocean-duck/venv/bin/ocean-dock"
+"command": "/path/to/ocean-dock/venv/bin/ocean-dock"
 ```
 
 ### Verify Connection
